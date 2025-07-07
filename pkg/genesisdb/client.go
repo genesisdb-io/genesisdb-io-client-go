@@ -62,6 +62,16 @@ type Event struct {
 	SpecVersion     string                 `json:"specversion,omitempty"`
 }
 
+type Precondition struct {
+	Type    string                 `json:"type"`
+	Payload map[string]interface{} `json:"payload"`
+}
+
+type CommitRequest struct {
+	Events        []Event         `json:"events"`
+	Preconditions []Precondition  `json:"preconditions,omitempty"`
+}
+
 func NewClient(config *Config) (*Genesisdb, error) {
 	if config.APIURL == "" {
 		return nil, fmt.Errorf("APIURL is required")
@@ -149,6 +159,10 @@ func (es *Genesisdb) StreamEvents(subject string) ([]Event, error) {
 }
 
 func (es *Genesisdb) CommitEvents(events []Event) error {
+	return es.CommitEventsWithPreconditions(events, nil)
+}
+
+func (es *Genesisdb) CommitEventsWithPreconditions(events []Event, preconditions []Precondition) error {
 	url := fmt.Sprintf("%s/api/%s/commit", strings.TrimRight(es.config.APIURL, "/"), es.config.APIVersion)
 
 	for i := range events {
@@ -170,7 +184,14 @@ func (es *Genesisdb) CommitEvents(events []Event) error {
 		}
 	}
 
-	requestBody, err := json.Marshal(map[string][]Event{"events": events})
+	commitRequest := CommitRequest{
+		Events: events,
+	}
+	if preconditions != nil {
+		commitRequest.Preconditions = preconditions
+	}
+
+	requestBody, err := json.Marshal(commitRequest)
 	if err != nil {
 		return fmt.Errorf("error marshaling request: %w", err)
 	}

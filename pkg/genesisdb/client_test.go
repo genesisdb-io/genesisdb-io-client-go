@@ -503,3 +503,58 @@ func BenchmarkStreamEvents(b *testing.B) {
 		}
 	}
 }
+
+func TestCommitEventsWithPreconditions(t *testing.T) {
+	client, err := NewClient(testConfig)
+	if err != nil {
+		t.Fatalf("Error creating client: %v", err)
+	}
+
+	events := []Event{
+		{
+			Source: "io.genesisdb.app",
+			Subject: "/foo/21",
+			Type:    "io.genesisdb.app.foo-added",
+			Data: map[string]interface{}{
+				"value": "Foo",
+			},
+		},
+	}
+
+	preconditions := []Precondition{
+		{
+			Type: "isSubjectNew",
+			Payload: map[string]interface{}{
+				"subject": "/foo/21",
+			},
+		},
+	}
+
+	err = client.CommitEventsWithPreconditions(events, preconditions)
+	if err != nil {
+		t.Fatalf("CommitEventsWithPreconditions() failed: %v", err)
+	}
+
+	t.Log("Events with preconditions successfully committed")
+
+	streamedEvents, err := client.StreamEvents("/foo/21")
+	if err != nil {
+		t.Fatalf("Error streaming foo events: %v", err)
+	}
+
+	found := false
+	for _, event := range streamedEvents {
+		if event.Type == "io.genesisdb.app.foo-added" {
+			data, ok := event.Data.(map[string]interface{})
+			if ok && data["value"] == "Foo" {
+				found = true
+				t.Logf("✓ Foo event found: ID=%s", event.ID)
+				break
+			}
+		}
+	}
+
+	if !found {
+		t.Error("Foo event not found in database")
+	}
+}

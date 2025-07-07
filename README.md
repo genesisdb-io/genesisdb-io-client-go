@@ -109,6 +109,39 @@ if err != nil {
 }
 ```
 
+### Committing Events with Preconditions
+
+```go
+import "github.com/genesisdb-io/genesisdb-io-client-go/pkg/genesisdb"
+
+// Example for creating events with preconditions
+events := []genesisdb.Event{
+    {
+        Source: "io.genesisdb.app",
+        Subject: "/foo/21",
+        Type:    "io.genesisdb.app.foo-added",
+        Data: map[string]interface{}{
+            "value": "Foo",
+        },
+    },
+}
+
+// Define preconditions
+preconditions := []genesisdb.Precondition{
+    {
+        Type: "isSubjectNew",
+        Payload: map[string]interface{}{
+            "subject": "/foo/21",
+        },
+    },
+}
+
+err := client.CommitEventsWithPreconditions(events, preconditions)
+if err != nil {
+    log.Fatal(err)
+}
+```
+
 ### Querying Events
 
 ```go

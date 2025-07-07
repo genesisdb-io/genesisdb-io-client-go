@@ -54,6 +54,33 @@ for _, event := range events {
 }
 ```
 
+### Observing Events in Real-Time
+
+```go
+import "github.com/genesisdb-io/genesisdb-io-client-go/pkg/genesisdb"
+
+// Start observing events for a subject
+eventChan, errorChan := client.ObserveEvents("/customer")
+
+// Listen for events in a goroutine
+go func() {
+    for {
+        select {
+        case event := <-eventChan:
+            fmt.Printf("Real-time event: Type=%s, Subject=%s, Data=%v\n",
+                event.Type, event.Subject, event.Data)
+        case err := <-errorChan:
+            if err != nil {
+                fmt.Printf("Observe error: %v\n", err)
+            }
+            return
+        }
+    }
+}()
+
+// The observe connection will stay open and stream events as they occur
+```
+
 ### Committing Events
 
 ```go

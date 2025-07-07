@@ -329,3 +329,94 @@ func (es *Genesisdb) Audit() (string, error) {
 
 	return string(bodyBytes), nil
 }
+
+func (es *Genesisdb) ObserveEvents(subject string) (<-chan Event, <-chan error) {
+	eventChan := make(chan Event, 100)
+	errorChan := make(chan error, 1)
+
+	go func() {
+		defer close(eventChan)
+		defer close(errorChan)
+
+		url := fmt.Sprintf("%s/api/%s/observe", strings.TrimRight(es.config.APIURL, "/"), es.config.APIVersion)
+
+		requestBody, err := json.Marshal(map[string]string{"subject": subject})
+		if err != nil {
+			errorChan <- fmt.Errorf("error marshaling request: %w", err)
+			return
+		}
+
+		req, err := http.NewRequest("POST", url, bytes.NewBuffer(requestBody))
+		if err != nil {
+			errorChan <- fmt.Errorf("error creating request: %w", err)
+			return
+		}
+
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", es.config.AuthToken))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Accept", "application/x-ndjson")
+		req.Header.Set("User-Agent", "inoovum-genesisdb-sdk-go")
+
+		resp, err := es.client.Do(req)
+		if err != nil {
+			errorChan <- fmt.Errorf("error making request: %w", err)
+			return
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			bodyBytes, _ := io.ReadAll(resp.Body)
+			errorChan <- fmt.Errorf("API error: %s - %s", resp.Status, string(bodyBytes))
+			return
+		}
+
+		scanner := bufio.NewScanner(resp.Body)
+		for scanner.Scan() {
+			line := strings.TrimSpace(scanner.Text())
+			if line == "" {
+				continue
+			}
+
+			jsonStr := line
+			if strings.HasPrefix(line, "data: ") {
+				jsonStr = line[6:]
+			}
+
+			var event Event
+			if err := json.Unmarshal([]byte(jsonStr), &event); err != nil {
+				errorChan <- fmt.Errorf("error parsing event JSON: %w", err)
+				continue
+			}
+
+			if event.ID == "" {
+				event.ID = uuid.New().String()
+			}
+			if event.Source == "" {
+				event.Source = es.config.APIURL
+			}
+			if event.DataContentType == "" {
+				event.DataContentType = "application/json"
+			}
+			if event.SpecVersion == "" {
+				event.SpecVersion = "1.0"
+			}
+			if event.Time == RFC3339Time(time.Time{}) {
+				now := time.Now().UTC()
+				event.Time = RFC3339Time(now)
+			}
+
+			select {
+			case eventChan <- event:
+			case <-time.After(5 * time.Second):
+				errorChan <- fmt.Errorf("timeout sending event to channel")
+				return
+			}
+		}
+
+		if err := scanner.Err(); err != nil {
+			errorChan <- fmt.Errorf("error reading response: %w", err)
+		}
+	}()
+
+	return eventChan, errorChan
+}

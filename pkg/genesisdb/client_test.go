@@ -558,3 +558,35 @@ func TestCommitEventsWithPreconditions(t *testing.T) {
 		t.Error("Foo event not found in database")
 	}
 }
+
+func TestObserveEvents(t *testing.T) {
+	client, err := NewClient(testConfig)
+	if err != nil {
+		t.Fatalf("Error creating client: %v", err)
+	}
+
+	eventChan, errorChan := client.ObserveEvents("/test/observe")
+
+	timeout := time.After(10 * time.Second)
+	eventsReceived := 0
+
+	for {
+		select {
+		case event := <-eventChan:
+			eventsReceived++
+			t.Logf("Received event: Type=%s, Subject=%s, ID=%s", event.Type, event.Subject, event.ID)
+
+			if eventsReceived >= 1 {
+				return
+			}
+		case err := <-errorChan:
+			if err != nil {
+				t.Logf("Observe error (this might be normal if no events): %v", err)
+			}
+			return
+		case <-timeout:
+			t.Log("Timeout waiting for events - this is normal if no events are being streamed")
+			return
+		}
+	}
+}

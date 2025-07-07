@@ -217,4 +217,4 @@ All methods return errors when something goes wrong. Make sure to check for erro
 
 ## License
 
-Copyright © 2024 Genesis DB. All rights reserved.
+Copyright © 2025 Genesis DB. All rights reserved.

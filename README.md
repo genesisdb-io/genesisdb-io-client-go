@@ -54,6 +54,47 @@ for _, event := range events {
 }
 ```
 
+### Stream Events from lower bound
+
+```go
+import "github.com/genesisdb-io/genesisdb-io-client-go/pkg/genesisdb"
+
+options := &genesisdb.StreamOptions{
+    LowerBound:            "2d6d4141-6107-4fb2-905f-445730f4f2a9",
+    IncludeLowerBoundEvent: true,
+}
+
+events, err := client.StreamEvents("/", options)
+if err != nil {
+    log.Fatal(err)
+}
+
+for _, event := range events {
+    fmt.Printf("Event Type: %s, Data: %v\n", event.Type, event.Data)
+}
+```
+
+### Stream Events with latest by event type
+
+```go
+import "github.com/genesisdb-io/genesisdb-io-client-go/pkg/genesisdb"
+
+options := &genesisdb.StreamOptions{
+    LatestByEventType: "io.genesisdb.foo.foobarfoo-updated",
+}
+
+events, err := client.StreamEvents("/", options)
+if err != nil {
+    log.Fatal(err)
+}
+
+for _, event := range events {
+    fmt.Printf("Event Type: %s, Data: %v\n", event.Type, event.Data)
+}
+```
+
+This feature allows you to stream only the latest event of a specific type for each subject. Useful for getting the current state of entities.
+
 ### Observing Events in Real-Time
 
 ```go
@@ -61,6 +102,38 @@ import "github.com/genesisdb-io/genesisdb-io-client-go/pkg/genesisdb"
 
 // Start observing events for a subject
 eventChan, errorChan := client.ObserveEvents("/customer")
+
+// Listen for events in a goroutine
+go func() {
+    for {
+        select {
+        case event := <-eventChan:
+            fmt.Printf("Real-time event: Type=%s, Subject=%s, Data=%v\n",
+                event.Type, event.Subject, event.Data)
+        case err := <-errorChan:
+            if err != nil {
+                fmt.Printf("Observe error: %v\n", err)
+            }
+            return
+        }
+    }
+}()
+
+// The observe connection will stay open and stream events as they occur
+```
+
+### Observe Events from lower bound (Message queue)
+
+```go
+import "github.com/genesisdb-io/genesisdb-io-client-go/pkg/genesisdb"
+
+options := &genesisdb.StreamOptions{
+    LowerBound:            "2d6d4141-6107-4fb2-905f-445730f4f2a9",
+    IncludeLowerBoundEvent: true,
+}
+
+// Start observing events for a subject with lower bound
+eventChan, errorChan := client.ObserveEvents("/customer", options)
 
 // Listen for events in a goroutine
 go func() {
@@ -131,6 +204,42 @@ events := []genesisdb.Event{
 }
 
 err := client.CommitEvents(events)
+if err != nil {
+    log.Fatal(err)
+}
+```
+
+### Usage of referenced data (GDPR)
+
+```go
+import "github.com/genesisdb-io/genesisdb-io-client-go/pkg/genesisdb"
+
+events := []genesisdb.Event{
+    {
+        Source: "io.genesisdb.app",
+        Subject: "/foo/21",
+        Type:    "io.genesisdb.app.foo-added",
+        Data: map[string]interface{}{
+            "value": "Foo",
+        },
+        Options: map[string]interface{}{
+            "storeDataAsReference": true,
+        },
+    },
+}
+
+err := client.CommitEvents(events)
+if err != nil {
+    log.Fatal(err)
+}
+```
+
+### Deleting referenced data (GDPR)
+
+```go
+import "github.com/genesisdb-io/genesisdb-io-client-go/pkg/genesisdb"
+
+err := client.EraseData("/foo/21")
 if err != nil {
     log.Fatal(err)
 }

@@ -60,6 +60,7 @@ type Event struct {
 	Data            interface{}            `json:"data"`
 	DataContentType string                 `json:"datacontenttype,omitempty"`
 	SpecVersion     string                 `json:"specversion,omitempty"`
+	Options         map[string]interface{} `json:"options,omitempty"`
 }
 
 type Precondition struct {
@@ -70,6 +71,17 @@ type Precondition struct {
 type CommitRequest struct {
 	Events        []Event         `json:"events"`
 	Preconditions []Precondition  `json:"preconditions,omitempty"`
+}
+
+type StreamOptions struct {
+	LowerBound            string `json:"lowerBound,omitempty"`
+	IncludeLowerBoundEvent bool   `json:"includeLowerBoundEvent,omitempty"`
+	LatestByEventType     string `json:"latestByEventType,omitempty"`
+}
+
+type StreamRequest struct {
+	Subject string         `json:"subject"`
+	Options *StreamOptions `json:"options,omitempty"`
 }
 
 func NewClient(config *Config) (*Genesisdb, error) {
@@ -89,15 +101,20 @@ func NewClient(config *Config) (*Genesisdb, error) {
 	}, nil
 }
 
-func (es *Genesisdb) StreamEvents(subject string) ([]Event, error) {
+func (es *Genesisdb) StreamEvents(subject string, options *StreamOptions) ([]Event, error) {
 	url := fmt.Sprintf("%s/api/%s/stream", strings.TrimRight(es.config.APIURL, "/"), es.config.APIVersion)
 
-	requestBody, err := json.Marshal(map[string]string{"subject": subject})
+	requestBody := StreamRequest{
+		Subject: subject,
+		Options: options,
+	}
+
+	requestBodyBytes, err := json.Marshal(requestBody)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling request: %w", err)
 	}
 
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(requestBody))
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(requestBodyBytes))
 	if err != nil {
 		return nil, fmt.Errorf("error creating request: %w", err)
 	}
@@ -163,6 +180,10 @@ func (es *Genesisdb) CommitEvents(events []Event) error {
 }
 
 func (es *Genesisdb) CommitEventsWithPreconditions(events []Event, preconditions []Precondition) error {
+	return es.CommitEventsWithOptions(events, preconditions)
+}
+
+func (es *Genesisdb) CommitEventsWithOptions(events []Event, preconditions []Precondition) error {
 	url := fmt.Sprintf("%s/api/%s/commit", strings.TrimRight(es.config.APIURL, "/"), es.config.APIVersion)
 
 	for i := range events {
@@ -192,6 +213,37 @@ func (es *Genesisdb) CommitEventsWithPreconditions(events []Event, preconditions
 	}
 
 	requestBody, err := json.Marshal(commitRequest)
+	if err != nil {
+		return fmt.Errorf("error marshaling request: %w", err)
+	}
+
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(requestBody))
+	if err != nil {
+		return fmt.Errorf("error creating request: %w", err)
+	}
+
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", es.config.AuthToken))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("User-Agent", "inoovum-genesisdb-sdk-go")
+
+	resp, err := es.client.Do(req)
+	if err != nil {
+		return fmt.Errorf("error making request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("API error: %s - %s", resp.Status, string(bodyBytes))
+	}
+
+	return nil
+}
+
+func (es *Genesisdb) EraseData(subject string) error {
+	url := fmt.Sprintf("%s/api/%s/erase", strings.TrimRight(es.config.APIURL, "/"), es.config.APIVersion)
+
+	requestBody, err := json.Marshal(map[string]string{"subject": subject})
 	if err != nil {
 		return fmt.Errorf("error marshaling request: %w", err)
 	}
@@ -330,7 +382,7 @@ func (es *Genesisdb) Audit() (string, error) {
 	return string(bodyBytes), nil
 }
 
-func (es *Genesisdb) ObserveEvents(subject string) (<-chan Event, <-chan error) {
+func (es *Genesisdb) ObserveEvents(subject string, options *StreamOptions) (<-chan Event, <-chan error) {
 	eventChan := make(chan Event, 100)
 	errorChan := make(chan error, 1)
 
@@ -340,13 +392,18 @@ func (es *Genesisdb) ObserveEvents(subject string) (<-chan Event, <-chan error) 
 
 		url := fmt.Sprintf("%s/api/%s/observe", strings.TrimRight(es.config.APIURL, "/"), es.config.APIVersion)
 
-		requestBody, err := json.Marshal(map[string]string{"subject": subject})
+		requestBody := StreamRequest{
+			Subject: subject,
+			Options: options,
+		}
+
+		requestBodyBytes, err := json.Marshal(requestBody)
 		if err != nil {
 			errorChan <- fmt.Errorf("error marshaling request: %w", err)
 			return
 		}
 
-		req, err := http.NewRequest("POST", url, bytes.NewBuffer(requestBody))
+		req, err := http.NewRequest("POST", url, bytes.NewBuffer(requestBodyBytes))
 		if err != nil {
 			errorChan <- fmt.Errorf("error creating request: %w", err)
 			return

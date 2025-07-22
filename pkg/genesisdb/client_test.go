@@ -141,7 +141,7 @@ func TestCommitEvents(t *testing.T) {
 
 	t.Log("Events successfully committed")
 
-	streamedEvents, err := client.StreamEvents("/test/customer")
+			streamedEvents, err := client.StreamEvents("/test/customer", nil)
 	if err != nil {
 		t.Fatalf("Error streaming customer events: %v", err)
 	}
@@ -162,7 +162,7 @@ func TestCommitEvents(t *testing.T) {
 		t.Error("Customer event not found in database")
 	}
 
-	articleEvents, err := client.StreamEvents("/test/article")
+			articleEvents, err := client.StreamEvents("/test/article", nil)
 	if err != nil {
 		t.Fatalf("Error streaming article events: %v", err)
 	}
@@ -210,7 +210,7 @@ func TestStreamEvents(t *testing.T) {
 
 	time.Sleep(100 * time.Millisecond)
 
-	events, err := client.StreamEvents("/test/stream")
+	events, err := client.StreamEvents("/test/stream", nil)
 	if err != nil {
 		t.Fatalf("StreamEvents() failed: %v", err)
 	}
@@ -234,6 +234,51 @@ func TestStreamEvents(t *testing.T) {
 
 		if !found {
 			t.Log("Our specific test event was not found (can be normal with many events)")
+		}
+	}
+}
+
+func TestStreamEventsWithLatestByEventType(t *testing.T) {
+	client, err := NewClient(testConfig)
+	if err != nil {
+		t.Fatalf("Error creating client: %v", err)
+	}
+
+	testEvents := []Event{
+		{
+			Source:  "io.genesisdb.test",
+			Subject: "/test/latest",
+			Type:    "io.genesisdb.test.latest-test",
+			Data: map[string]interface{}{
+				"message":   "Test for Latest By Event Type",
+				"timestamp": time.Now().Unix(),
+				"uniqueId":  fmt.Sprintf("latest-test-%d", time.Now().UnixNano()),
+			},
+		},
+	}
+
+	err = client.CommitEvents(testEvents)
+	if err != nil {
+		t.Fatalf("Error committing test events: %v", err)
+	}
+
+	time.Sleep(100 * time.Millisecond)
+
+	options := &StreamOptions{
+		LatestByEventType: "io.genesisdb.test.latest-test",
+	}
+
+	events, err := client.StreamEvents("/test/latest", options)
+	if err != nil {
+		t.Fatalf("StreamEvents() with latestByEventType failed: %v", err)
+	}
+
+	if len(events) == 0 {
+		t.Log("No events found with latestByEventType - this is normal if no events exist")
+	} else {
+		t.Logf("Found events with latestByEventType: %d", len(events))
+		for i, event := range events {
+			t.Logf("Event %d: Type=%s, Subject=%s, ID=%s", i+1, event.Type, event.Subject, event.ID)
 		}
 	}
 }
@@ -350,7 +395,7 @@ func TestEventValidation(t *testing.T) {
 
 	time.Sleep(100 * time.Millisecond)
 
-	streamedEvents, err := client.StreamEvents("/test/validation")
+			streamedEvents, err := client.StreamEvents("/test/validation", nil)
 	if err != nil {
 		t.Fatalf("Error verifying validated event: %v", err)
 	}
@@ -418,7 +463,7 @@ func TestIntegration(t *testing.T) {
 
 	time.Sleep(100 * time.Millisecond)
 
-	streamedEvents, err := client.StreamEvents("/test/integration")
+			streamedEvents, err := client.StreamEvents("/test/integration", nil)
 	if err != nil {
 		t.Fatalf("StreamEvents failed: %v", err)
 	}
@@ -497,7 +542,7 @@ func BenchmarkStreamEvents(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, err := client.StreamEvents("/benchmark/test")
+		_, err := client.StreamEvents("/benchmark/test", nil)
 		if err != nil {
 			b.Fatalf("StreamEvents failed: %v", err)
 		}
@@ -537,7 +582,7 @@ func TestCommitEventsWithPreconditions(t *testing.T) {
 
 	t.Log("Events with preconditions successfully committed")
 
-	streamedEvents, err := client.StreamEvents("/foo/21")
+			streamedEvents, err := client.StreamEvents("/foo/21", nil)
 	if err != nil {
 		t.Fatalf("Error streaming foo events: %v", err)
 	}
@@ -565,7 +610,7 @@ func TestObserveEvents(t *testing.T) {
 		t.Fatalf("Error creating client: %v", err)
 	}
 
-	eventChan, errorChan := client.ObserveEvents("/test/observe")
+			eventChan, errorChan := client.ObserveEvents("/test/observe", nil)
 
 	timeout := time.After(10 * time.Second)
 	eventsReceived := 0

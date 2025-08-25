@@ -300,6 +300,23 @@ for _, result := range results {
 }
 ```
 
+### Querying Events (Alternative Method)
+
+```go
+import "github.com/genesisdb-io/genesisdb-io-client-go/pkg/genesisdb"
+
+query := `FROM e IN events WHERE e.type == "io.genesisdb.app.customer-added" ORDER BY e.time DESC TOP 20 PROJECT INTO { subject: e.subject, firstName: e.data.firstName }`
+
+results, err := client.QueryEvents(query)
+if err != nil {
+    log.Fatal(err)
+}
+
+for _, result := range results {
+    fmt.Printf("Result: %v\n", result)
+}
+```
+
 ### Health Checks
 
 ```go

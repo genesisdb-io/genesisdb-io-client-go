@@ -322,6 +322,15 @@ func (es *Genesisdb) Q(query string) ([]interface{}, error) {
 	return results, nil
 }
 
+// QueryEvents executes a query using the same functionality as the Q method
+// query: The query string to execute
+// Returns: Array of query results and any error
+// Example:
+//   results, err := client.QueryEvents(`FROM e IN events WHERE e.type == "io.genesisdb.app.customer-added" ORDER BY e.time DESC TOP 20 PROJECT INTO { subject: e.subject, firstName: e.data.firstName }`)
+func (es *Genesisdb) QueryEvents(query string) ([]interface{}, error) {
+	return es.Q(query)
+}
+
 func (es *Genesisdb) Ping() (string, error) {
 	url := fmt.Sprintf("%s/api/%s/status/ping", strings.TrimRight(es.config.APIURL, "/"), es.config.APIVersion)
 

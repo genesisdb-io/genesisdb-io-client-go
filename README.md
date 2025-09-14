@@ -394,4 +394,10 @@ All methods return errors when something goes wrong. Make sure to check for erro
 
 ## License
 
-Copyright © 2025 Genesis DB. All rights reserved.
+MIT
+
+## Author
+
+* E-Mail: mail@genesisdb.io
+* URL: https://www.genesisdb.io
+* Docs: https://docs.genesisdb.io

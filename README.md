@@ -262,12 +262,63 @@ events := []genesisdb.Event{
     },
 }
 
-// Define preconditions
+```
+
+## Preconditions
+
+Preconditions allow you to enforce certain checks on the server before committing events. Genesis DB supports multiple precondition types:
+
+### isSubjectNew
+Ensures that a subject is new (has no existing events):
+
+```go
+events := []genesisdb.Event{
+    {
+        Source: "io.genesisdb.app",
+        Subject: "/foo/21",
+        Type:    "io.genesisdb.app.foo-added",
+        Data: map[string]interface{}{
+            "value": "Foo",
+        },
+    },
+}
+
 preconditions := []genesisdb.Precondition{
     {
         Type: "isSubjectNew",
         Payload: map[string]interface{}{
             "subject": "/foo/21",
+        },
+    },
+}
+
+err := client.CommitEventsWithPreconditions(events, preconditions)
+if err != nil {
+    log.Fatal(err)
+}
+```
+
+### isQueryResultTrue
+Evaluates a query and ensures the result is truthy:
+
+```go
+events := []genesisdb.Event{
+    {
+        Source: "io.genesisdb.app",
+        Subject: "/event/conf-2024",
+        Type:    "io.genesisdb.app.registration-added",
+        Data: map[string]interface{}{
+            "attendeeName": "Alice",
+            "eventId": "conf-2024",
+        },
+    },
+}
+
+preconditions := []genesisdb.Precondition{
+    {
+        Type: "isQueryResultTrue",
+        Payload: map[string]interface{}{
+            "query": "FROM e IN events WHERE e.data.eventId == 'conf-2024' PROJECT INTO COUNT() < 500",
         },
     },
 }

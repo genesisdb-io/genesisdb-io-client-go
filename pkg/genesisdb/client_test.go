@@ -152,7 +152,7 @@ func TestCommitEvents(t *testing.T) {
 			data, ok := event.Data.(map[string]interface{})
 			if ok && data["firstName"] == "Max" {
 				found = true
-				t.Logf("✓ Customer event found: ID=%s", event.ID)
+				t.Logf("Customer event found: ID=%s", event.ID)
 				break
 			}
 		}
@@ -173,7 +173,7 @@ func TestCommitEvents(t *testing.T) {
 			data, ok := event.Data.(map[string]interface{})
 			if ok && data["name"] == "Test Article" {
 				found = true
-				t.Logf("✓ Article event found: ID=%s", event.ID)
+				t.Logf("Article event found: ID=%s", event.ID)
 				break
 			}
 		}
@@ -227,7 +227,7 @@ func TestStreamEvents(t *testing.T) {
 				data, ok := event.Data.(map[string]interface{})
 				if ok && data["message"] == "Test for Stream" {
 					found = true
-					t.Logf("✓ Our test event found: %s", event.ID)
+					t.Logf("Our test event found: %s", event.ID)
 				}
 			}
 		}
@@ -335,7 +335,7 @@ PROJECT INTO { id: e.id, name: e.data.name, value: e.data.value }
 			if resultMap, ok := result.(map[string]interface{}); ok {
 				if resultMap["name"] == "Query Test Event" {
 					found = true
-					t.Logf("✓ Our specific query result found")
+					t.Logf("Our specific query result found")
 				}
 			}
 		}
@@ -406,7 +406,7 @@ func TestEventValidation(t *testing.T) {
 			data, ok := streamedEvent.Data.(map[string]interface{})
 			if ok && data["uniqueId"] == uniqueId {
 				found = true
-				t.Logf("✓ Validated event found with ID: %s", streamedEvent.ID)
+				t.Logf("Validated event found with ID: %s", streamedEvent.ID)
 				break
 			}
 		}
@@ -427,7 +427,7 @@ func TestIntegration(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Ping failed: %v", err)
 	}
-	t.Log("✓ Ping successful")
+	t.Log("Ping successful")
 
 	uniqueId := fmt.Sprintf("integration-test-%d", time.Now().UnixNano())
 	events := []Event{
@@ -459,7 +459,7 @@ func TestIntegration(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CommitEvents failed: %v", err)
 	}
-	t.Log("✓ Events successfully committed")
+	t.Log("Events successfully committed")
 
 	time.Sleep(100 * time.Millisecond)
 
@@ -467,7 +467,7 @@ func TestIntegration(t *testing.T) {
 	if err != nil {
 		t.Fatalf("StreamEvents failed: %v", err)
 	}
-	t.Logf("✓ %d events streamed", len(streamedEvents))
+	t.Logf("%d events streamed", len(streamedEvents))
 
 	ourEvents := 0
 	for _, event := range streamedEvents {
@@ -478,7 +478,7 @@ func TestIntegration(t *testing.T) {
 			}
 		}
 	}
-	t.Logf("✓ Found %d of our specific integration events", ourEvents)
+	t.Logf("Found %d of our specific integration events", ourEvents)
 
 	query := `
 FROM e IN events
@@ -491,7 +491,7 @@ PROJECT INTO { step: e.data.step, message: e.data.message }
 	if err != nil {
 		t.Fatalf("Query failed: %v", err)
 	}
-	t.Logf("✓ Query executed successfully, %d results", len(results))
+	t.Logf("Query executed successfully, %d results", len(results))
 
 	if len(results) < 2 {
 		t.Errorf("Expected at least 2 query results, but found %d", len(results))
@@ -501,9 +501,9 @@ PROJECT INTO { step: e.data.step, message: e.data.message }
 	if err != nil {
 		t.Fatalf("Audit failed: %v", err)
 	}
-	t.Log("✓ Audit successful")
+	t.Log("Audit successful")
 
-	t.Log("🎉 Integration test completely successful!")
+	t.Log("Integration test completely successful!")
 }
 
 func BenchmarkCommitEvents(b *testing.B) {
@@ -593,7 +593,7 @@ func TestCommitEventsWithPreconditions(t *testing.T) {
 			data, ok := event.Data.(map[string]interface{})
 			if ok && data["value"] == "Foo" {
 				found = true
-				t.Logf("✓ Foo event found: ID=%s", event.ID)
+				t.Logf("Foo event found: ID=%s", event.ID)
 				break
 			}
 		}

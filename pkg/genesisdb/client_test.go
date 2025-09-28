@@ -7,10 +7,15 @@ import (
 	"time"
 )
 
-var testConfig = &Config{
-	APIURL:     "http://localhost:8080",
-	APIVersion: "v1",
-	AuthToken:  "secret",
+var testConfig *Config
+
+func init() {
+	cfg := GetTestConfig()
+	testConfig = &Config{
+		APIURL:     cfg.APIURL,
+		APIVersion: cfg.APIVersion,
+		AuthToken:  cfg.AuthToken,
+	}
 }
 
 func TestNewClient(t *testing.T) {
@@ -555,13 +560,17 @@ func TestCommitEventsWithPreconditions(t *testing.T) {
 		t.Fatalf("Error creating client: %v", err)
 	}
 
+	uniqueId := fmt.Sprintf("precondition-test-%d", time.Now().UnixNano())
+	subject := fmt.Sprintf("/foo/precondition/%s", uniqueId)
+
 	events := []Event{
 		{
 			Source: "io.genesisdb.app",
-			Subject: "/foo/21",
+			Subject: subject,
 			Type:    "io.genesisdb.app.foo-added",
 			Data: map[string]interface{}{
 				"value": "Foo",
+				"uniqueId": uniqueId,
 			},
 		},
 	}
@@ -570,7 +579,7 @@ func TestCommitEventsWithPreconditions(t *testing.T) {
 		{
 			Type: "isSubjectNew",
 			Payload: map[string]interface{}{
-				"subject": "/foo/21",
+				"subject": subject,
 			},
 		},
 	}
@@ -582,7 +591,7 @@ func TestCommitEventsWithPreconditions(t *testing.T) {
 
 	t.Log("Events with preconditions successfully committed")
 
-			streamedEvents, err := client.StreamEvents("/foo/21", nil)
+			streamedEvents, err := client.StreamEvents(subject, nil)
 	if err != nil {
 		t.Fatalf("Error streaming foo events: %v", err)
 	}

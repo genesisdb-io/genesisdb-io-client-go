@@ -1,6 +1,20 @@
 # Genesis DB Go SDK
 
-This is the official Go SDK for Genesis DB. It provides a simple interface to interact with the Genesis DB API.
+This is the official Go SDK for Genesis DB, an awesome and production ready event store database system for building event-driven apps.
+
+## Genesis DB Advantages
+
+* Incredibly fast when reading, fast when writing 🚀
+* Easy backup creation and recovery
+* [CloudEvents](https://cloudevents.io/) compatible
+* GDPR-ready
+* Easily accessible via the HTTP interface
+* Auditable. Guarantee database consistency
+* Logging and metrics for Prometheus
+* SQL like query language called Genesis DB Query Language (GDBQL)
+* ...
+
+This SDK provides a simple interface to interact with the Genesis DB API.
 
 ## Requirements
 
@@ -74,13 +88,55 @@ for _, event := range events {
 }
 ```
 
+### Stream Events with upper bound
+
+```go
+import "github.com/genesisdb-io/genesisdb-io-client-go/pkg/genesisdb"
+
+options := &genesisdb.StreamOptions{
+    UpperBound:            "9f3e4141-7208-4fb2-905f-445730f4f3b1",
+    IncludeUpperBoundEvent: false,
+}
+
+events, err := client.StreamEvents("/", options)
+if err != nil {
+    log.Fatal(err)
+}
+
+for _, event := range events {
+    fmt.Printf("Event Type: %s, Data: %v\n", event.Type, event.Data)
+}
+```
+
+### Stream Events with both lower and upper bounds
+
+```go
+import "github.com/genesisdb-io/genesisdb-io-client-go/pkg/genesisdb"
+
+options := &genesisdb.StreamOptions{
+    LowerBound:            "2d6d4141-6107-4fb2-905f-445730f4f2a9",
+    IncludeLowerBoundEvent: true,
+    UpperBound:            "9f3e4141-7208-4fb2-905f-445730f4f3b1",
+    IncludeUpperBoundEvent: false,
+}
+
+events, err := client.StreamEvents("/", options)
+if err != nil {
+    log.Fatal(err)
+}
+
+for _, event := range events {
+    fmt.Printf("Event Type: %s, Data: %v\n", event.Type, event.Data)
+}
+```
+
 ### Stream Events with latest by event type
 
 ```go
 import "github.com/genesisdb-io/genesisdb-io-client-go/pkg/genesisdb"
 
 options := &genesisdb.StreamOptions{
-    LatestByEventType: "io.genesisdb.foo.foobarfoo-updated",
+    LatestByEventType: "io.genesisdb.app.customer-updated",
 }
 
 events, err := client.StreamEvents("/", options)
@@ -154,6 +210,97 @@ go func() {
 // The observe connection will stay open and stream events as they occur
 ```
 
+### Observe Events with upper bound (Message queue)
+
+```go
+import "github.com/genesisdb-io/genesisdb-io-client-go/pkg/genesisdb"
+
+options := &genesisdb.StreamOptions{
+    UpperBound:            "9f3e4141-7208-4fb2-905f-445730f4f3b1",
+    IncludeUpperBoundEvent: false,
+}
+
+// Start observing events for a subject with upper bound
+eventChan, errorChan := client.ObserveEvents("/customer", options)
+
+// Listen for events in a goroutine
+go func() {
+    for {
+        select {
+        case event := <-eventChan:
+            fmt.Printf("Real-time event: Type=%s, Subject=%s, Data=%v\n",
+                event.Type, event.Subject, event.Data)
+        case err := <-errorChan:
+            if err != nil {
+                fmt.Printf("Observe error: %v\n", err)
+            }
+            return
+        }
+    }
+}()
+```
+
+### Observe Events with both bounds (Message queue)
+
+```go
+import "github.com/genesisdb-io/genesisdb-io-client-go/pkg/genesisdb"
+
+options := &genesisdb.StreamOptions{
+    LowerBound:            "2d6d4141-6107-4fb2-905f-445730f4f2a9",
+    IncludeLowerBoundEvent: true,
+    UpperBound:            "9f3e4141-7208-4fb2-905f-445730f4f3b1",
+    IncludeUpperBoundEvent: false,
+}
+
+// Start observing events for a subject with both bounds
+eventChan, errorChan := client.ObserveEvents("/customer", options)
+
+// Listen for events in a goroutine
+go func() {
+    for {
+        select {
+        case event := <-eventChan:
+            fmt.Printf("Real-time event: Type=%s, Subject=%s, Data=%v\n",
+                event.Type, event.Subject, event.Data)
+        case err := <-errorChan:
+            if err != nil {
+                fmt.Printf("Observe error: %v\n", err)
+            }
+            return
+        }
+    }
+}()
+```
+
+### Observe Latest Events by Event Type (Message queue)
+
+```go
+import "github.com/genesisdb-io/genesisdb-io-client-go/pkg/genesisdb"
+
+options := &genesisdb.StreamOptions{
+    LatestByEventType: "io.genesisdb.app.customer-updated",
+}
+
+// Start observing latest events by type
+eventChan, errorChan := client.ObserveEvents("/customer", options)
+
+// Listen for events in a goroutine
+go func() {
+    for {
+        select {
+        case event := <-eventChan:
+            fmt.Printf("Latest event: Type=%s, Subject=%s, Data=%v\n",
+                event.Type, event.Subject, event.Data)
+        case err := <-errorChan:
+            if err != nil {
+                fmt.Printf("Observe error: %v\n", err)
+            }
+            return
+        }
+    }
+}()
+```
+
 ### Committing Events
 
 ```go
@@ -217,18 +364,21 @@ import "github.com/genesisdb-io/genesisdb-io-client-go/pkg/genesisdb"
 events := []genesisdb.Event{
     {
         Source: "io.genesisdb.app",
-        Subject: "/foo/21",
-        Type:    "io.genesisdb.app.foo-added",
+        Subject: "/user/456",
+        Type:    "io.genesisdb.app.user-created",
         Data: map[string]interface{}{
-            "value": "Foo",
-        },
-        Options: map[string]interface{}{
-            "storeDataAsReference": true,
+            "firstName": "John",
+            "lastName": "Doe",
+            "email": "john.doe@example.com",
         },
     },
 }
 
-err := client.CommitEvents(events)
+options := &genesisdb.CommitOptions{
+    StoreDataAsReference: true,
+}
+
+err := client.CommitEventsWithOptions(events, options)
 if err != nil {
     log.Fatal(err)
 }
@@ -239,7 +389,7 @@ if err != nil {
 ```go
 import "github.com/genesisdb-io/genesisdb-io-client-go/pkg/genesisdb"
 
-err := client.EraseData("/foo/21")
+err := client.EraseData("/user/456")
 if err != nil {
     log.Fatal(err)
 }
@@ -275,10 +425,12 @@ Ensures that a subject is new (has no existing events):
 events := []genesisdb.Event{
     {
         Source: "io.genesisdb.app",
-        Subject: "/foo/21",
-        Type:    "io.genesisdb.app.foo-added",
+        Subject: "/user/456",
+        Type:    "io.genesisdb.app.user-created",
         Data: map[string]interface{}{
-            "value": "Foo",
+            "firstName": "John",
+            "lastName": "Doe",
+            "email": "john.doe@example.com",
         },
     },
 }
@@ -287,7 +439,7 @@ preconditions := []genesisdb.Precondition{
     {
         Type: "isSubjectNew",
         Payload: map[string]interface{}{
-            "subject": "/foo/21",
+            "subject": "/user/456",
         },
     },
 }
@@ -299,17 +451,19 @@ if err != nil {
 ```
 
 ### isQueryResultTrue
-Evaluates a query and ensures the result is truthy:
+Evaluates a query and ensures the result is truthy. Supports the full GDBQL feature set including complex WHERE clauses, aggregations, and calculated fields.
 
+**Basic uniqueness check:**
 ```go
 events := []genesisdb.Event{
     {
         Source: "io.genesisdb.app",
-        Subject: "/event/conf-2024",
-        Type:    "io.genesisdb.app.registration-added",
+        Subject: "/user/456",
+        Type:    "io.genesisdb.app.user-created",
         Data: map[string]interface{}{
-            "attendeeName": "Alice",
-            "eventId": "conf-2024",
+            "firstName": "John",
+            "lastName": "Doe",
+            "email": "john.doe@example.com",
         },
     },
 }
@@ -318,7 +472,7 @@ preconditions := []genesisdb.Precondition{
     {
         Type: "isQueryResultTrue",
         Payload: map[string]interface{}{
-            "query": "FROM e IN events WHERE e.data.eventId == 'conf-2024' PROJECT INTO COUNT() < 500",
+            "query": "STREAM e FROM events WHERE e.data.email == 'john.doe@example.com' MAP COUNT() == 0",
         },
     },
 }
@@ -329,16 +483,86 @@ if err != nil {
 }
 ```
 
+**Business rule enforcement (transaction limits):**
+```go
+events := []genesisdb.Event{
+    {
+        Source: "io.genesisdb.banking",
+        Subject: "/user/123/transactions",
+        Type:    "io.genesisdb.banking.transaction-processed",
+        Data: map[string]interface{}{
+            "amount": 500.00,
+            "currency": "EUR",
+        },
+    },
+}
+
+preconditions := []genesisdb.Precondition{
+    {
+        Type: "isQueryResultTrue",
+        Payload: map[string]interface{}{
+            "query": "STREAM e FROM events WHERE e.subject UNDER '/user/123' AND e.type == 'transaction-processed' AND e.time >= '2024-01-01T00:00:00Z' MAP SUM(e.data.amount) + 500 <= 10000",
+        },
+    },
+}
+
+err := client.CommitEventsWithPreconditions(events, preconditions)
+if err != nil {
+    log.Fatal(err)
+}
+```
+
+**Complex validation with aggregations:**
+```go
+events := []genesisdb.Event{
+    {
+        Source: "io.genesisdb.events",
+        Subject: "/conference/2024/registrations",
+        Type:    "io.genesisdb.events.registration-created",
+        Data: map[string]interface{}{
+            "attendeeId": "att-789",
+            "ticketType": "premium",
+        },
+    },
+}
+
+preconditions := []genesisdb.Precondition{
+    {
+        Type: "isQueryResultTrue",
+        Payload: map[string]interface{}{
+            "query": "STREAM e FROM events WHERE e.subject UNDER '/conference/2024/registrations' AND e.type == 'registration-created' GROUP BY e.data.ticketType HAVING e.data.ticketType == 'premium' MAP COUNT() < 50",
+        },
+    },
+}
+
+err := client.CommitEventsWithPreconditions(events, preconditions)
+if err != nil {
+    log.Fatal(err)
+}
+```
+
+**Supported GDBQL Features in Preconditions:**
+- WHERE conditions with AND/OR/IN/BETWEEN operators
+- Hierarchical subject queries (UNDER, DESCENDANTS)
+- Aggregation functions (COUNT, SUM, AVG, MIN, MAX)
+- GROUP BY with HAVING clauses
+- ORDER BY and LIMIT clauses
+- Calculated fields and expressions
+- Nested field access (e.data.address.city)
+- String concatenation and arithmetic operations
+
+If a precondition fails, the commit returns HTTP 412 (Precondition Failed) with details about which condition failed.
+
 ### Querying Events
 
 ```go
 import "github.com/genesisdb-io/genesisdb-io-client-go/pkg/genesisdb"
 
 query := `
-FROM e IN events
+STREAM e FROM events
 WHERE e.type == 'io.genesisdb.app.customer-added'
 ORDER BY e.time
-PROJECT INTO { id: e.id, firstName: e.data.firstName, lastName: e.data.lastName }
+MAP { id: e.id, firstName: e.data.firstName, lastName: e.data.lastName }
 `
 
 results, err := client.Q(query)
@@ -356,7 +580,7 @@ for _, result := range results {
 ```go
 import "github.com/genesisdb-io/genesisdb-io-client-go/pkg/genesisdb"
 
-query := `FROM e IN events WHERE e.type == "io.genesisdb.app.customer-added" ORDER BY e.time DESC TOP 20 PROJECT INTO { subject: e.subject, firstName: e.data.firstName }`
+query := `STREAM e FROM events WHERE e.type == "io.genesisdb.app.customer-added" ORDER BY e.time DESC LIMIT 20 MAP { subject: e.subject, firstName: e.data.firstName }`
 
 results, err := client.QueryEvents(query)
 if err != nil {
@@ -368,7 +592,8 @@ for _, result := range results {
 }
 ```
 
-### Health Checks
+
+## Health Checks
 
 ```go
 import "github.com/genesisdb-io/genesisdb-io-client-go/pkg/genesisdb"
@@ -380,7 +605,7 @@ if err != nil {
 }
 fmt.Printf("Ping response: %s\n", response)
 
-// Run audit
+// Run audit to check event consistency
 response, err = client.Audit()
 if err != nil {
     log.Fatal(err)

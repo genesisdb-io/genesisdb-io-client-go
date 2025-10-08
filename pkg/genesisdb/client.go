@@ -448,6 +448,14 @@ func (es *Genesisdb) ObserveEvents(subject string, options *StreamOptions) (<-ch
 				jsonStr = line[6:]
 			}
 
+			// Check if this is an empty payload object with only one key
+			var jsonMap map[string]interface{}
+			if err := json.Unmarshal([]byte(jsonStr), &jsonMap); err == nil {
+				if payload, ok := jsonMap["payload"].(string); ok && payload == "" && len(jsonMap) == 1 {
+					continue
+				}
+			}
+
 			var event Event
 			if err := json.Unmarshal([]byte(jsonStr), &event); err != nil {
 				errorChan <- fmt.Errorf("error parsing event JSON: %w", err)

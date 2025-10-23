@@ -122,7 +122,7 @@ func (es *Genesisdb) StreamEvents(subject string, options *StreamOptions) ([]Eve
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", es.config.AuthToken))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/x-ndjson")
-	req.Header.Set("User-Agent", "inoovum-genesisdb-sdk-go")
+	req.Header.Set("User-Agent", "genesisdb-sdk-go")
 
 	resp, err := es.client.Do(req)
 	if err != nil {
@@ -224,7 +224,7 @@ func (es *Genesisdb) CommitEventsWithOptions(events []Event, preconditions []Pre
 
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", es.config.AuthToken))
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("User-Agent", "inoovum-genesisdb-sdk-go")
+	req.Header.Set("User-Agent", "genesisdb-sdk-go")
 
 	resp, err := es.client.Do(req)
 	if err != nil {
@@ -255,7 +255,7 @@ func (es *Genesisdb) EraseData(subject string) error {
 
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", es.config.AuthToken))
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("User-Agent", "inoovum-genesisdb-sdk-go")
+	req.Header.Set("User-Agent", "genesisdb-sdk-go")
 
 	resp, err := es.client.Do(req)
 	if err != nil {
@@ -287,7 +287,7 @@ func (es *Genesisdb) Q(query string) ([]interface{}, error) {
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", es.config.AuthToken))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/x-ndjson")
-	req.Header.Set("User-Agent", "inoovum-genesisdb-sdk-go")
+	req.Header.Set("User-Agent", "genesisdb-sdk-go")
 
 	resp, err := es.client.Do(req)
 	if err != nil {
@@ -340,7 +340,7 @@ func (es *Genesisdb) Ping() (string, error) {
 	}
 
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", es.config.AuthToken))
-	req.Header.Set("User-Agent", "inoovum-genesisdb-sdk-go")
+	req.Header.Set("User-Agent", "genesisdb-sdk-go")
 
 	resp, err := es.client.Do(req)
 	if err != nil {
@@ -370,7 +370,7 @@ func (es *Genesisdb) Audit() (string, error) {
 	}
 
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", es.config.AuthToken))
-	req.Header.Set("User-Agent", "inoovum-genesisdb-sdk-go")
+	req.Header.Set("User-Agent", "genesisdb-sdk-go")
 
 	resp, err := es.client.Do(req)
 	if err != nil {
@@ -421,7 +421,7 @@ func (es *Genesisdb) ObserveEvents(subject string, options *StreamOptions) (<-ch
 		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", es.config.AuthToken))
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Accept", "application/x-ndjson")
-		req.Header.Set("User-Agent", "inoovum-genesisdb-sdk-go")
+		req.Header.Set("User-Agent", "genesisdb-sdk-go")
 
 		resp, err := es.client.Do(req)
 		if err != nil {

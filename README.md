@@ -450,6 +450,38 @@ if err != nil {
 }
 ```
 
+### isSubjectExisting
+Ensures that events exist for the specified subject:
+
+```go
+events := []genesisdb.Event{
+    {
+        Source: "io.genesisdb.app",
+        Subject: "/user/456",
+        Type:    "io.genesisdb.app.user-created",
+        Data: map[string]interface{}{
+            "firstName": "John",
+            "lastName": "Doe",
+            "email": "john.doe@example.com",
+        },
+    },
+}
+
+preconditions := []genesisdb.Precondition{
+    {
+        Type: "isSubjectExisting",
+        Payload: map[string]interface{}{
+            "subject": "/user/456",
+        },
+    },
+}
+
+err := client.CommitEventsWithPreconditions(events, preconditions)
+if err != nil {
+    log.Fatal(err)
+}
+```
+
 ### isQueryResultTrue
 Evaluates a query and ensures the result is truthy. Supports the full GDBQL feature set including complex WHERE clauses, aggregations, and calculated fields.
 

@@ -1,8 +1,8 @@
-# Genesis DB Go SDK
+# GenesisDB Go SDK
 
-This is the official Go SDK for Genesis DB, an awesome and production ready event store database system for building event-driven apps.
+This is the official Go SDK for GenesisDB, an awesome and production ready event store database system for building event-driven apps.
 
-## Genesis DB Advantages
+## GenesisDB Advantages
 
 * Incredibly fast when reading, fast when writing 🚀
 * Easy backup creation and recovery
@@ -11,10 +11,10 @@ This is the official Go SDK for Genesis DB, an awesome and production ready even
 * Easily accessible via the HTTP interface
 * Auditable. Guarantee database consistency
 * Logging and metrics for Prometheus
-* SQL like query language called Genesis DB Query Language (GDBQL)
+* SQL like query language called GenesisDB Query Language (GDBQL)
 * ...
 
-This SDK provides a simple interface to interact with the Genesis DB API.
+This SDK provides a simple interface to interact with the GenesisDB API.
 
 ## Requirements
 
@@ -30,7 +30,7 @@ go get github.com/genesisdb-io/genesisdb-io-client-go
 
 The SDK requires the following environment variables to be set:
 
-* `GENESISDB_API_URL`: The URL of the Genesis DB API
+* `GENESISDB_API_URL`: The URL of the GenesisDB API
 * `GENESISDB_API_VERSION`: The version of the API to use
 * `GENESISDB_AUTH_TOKEN`: Your authentication token
 
@@ -416,7 +416,7 @@ events := []genesisdb.Event{
 
 ## Preconditions
 
-Preconditions allow you to enforce certain checks on the server before committing events. Genesis DB supports multiple precondition types:
+Preconditions allow you to enforce certain checks on the server before committing events. GenesisDB supports multiple precondition types:
 
 ### isSubjectNew
 Ensures that a subject is new (has no existing events):
